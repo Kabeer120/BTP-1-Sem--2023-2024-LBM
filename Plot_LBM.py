@@ -17,9 +17,10 @@ with open(data_file, 'r') as file:
 # Plot the data
 plt.figure(figsize=(8, 6))  # Set the figure size
 
-plt.plot(x_values, z_values, marker='o', linestyle='-', color='yellow', label='Exact Profile')
+plt.plot(x_values, z_values, marker='o', linestyle='--', color='yellow', label='Exact Profile')
 
-plt.plot(x_values, y_values, marker = 'x', color='black', label='Lattice Boltzman Profile')
+plt.plot(x_values, y_values, marker='x', color='black', label='Lattice Boltzman Profile', linestyle=None,linewidth = 0 )
+
 plt.xlabel('y/H')  # X-axis label
 plt.ylabel('Velocity')  # Y-axis label
 plt.title('2D Velocity Plot for Poiseulle Flow')  # Plot title
