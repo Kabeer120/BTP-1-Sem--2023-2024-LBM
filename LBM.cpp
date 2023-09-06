@@ -26,7 +26,7 @@ private:
     T dt;
     T rho0;
     T tau;
-    T dpdx;
+    T g;
     T t1;
     T t2;
     T t3;
@@ -39,8 +39,8 @@ private:
 
 public:
     LatticeBoltzmann(int nx, int ny)
-        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), rho0(1.0), tau(0.80), dpdx(1.0e-5) {
-        // Allocate memory dynamically using templates
+        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), rho0(1.0), tau(0.80), g(9.8) {
+
         f = new T**[9];
         feq = new T**[9];
         source = new T**[9];
@@ -137,7 +137,7 @@ public:
                         T t2 = u[i][j] * ex[k] + v[i][j] * ey[k];
                         T t3 = static_cast<T>(3.0) * (ex[k] - u[i][j]);
                         T t4 = static_cast<T>(9.0) * ((ex[k] * u[i][j]) + (ey[k] * v[i][j])) * ex[k];
-                        source[k][i][j] = (static_cast<T>(1.0) - static_cast<T>(0.50) / tau) * w[k] * dpdx * (t3 + t4);
+                        source[k][i][j] = (static_cast<T>(1.0) - static_cast<T>(0.50) / tau) * w[k] * g * (t3 + t4);
                         feq[k][i][j] = rho[i][j] * w[k] * (static_cast<T>(1.0) + (static_cast<T>(3.0) * t2) + (static_cast<T>(4.50) * t2 * t2) - (static_cast<T>(1.50) * t1));
                         f[k][i][j] = (omega * feq[k][i][j]) + ((static_cast<T>(1.0) - omega) * f[k][i][j]) + source[k][i][j];
                     }
@@ -211,7 +211,7 @@ public:
                         sx += f[k][i][j] * ex[k];
                         sy += f[k][i][j] * ey[k];
                     }
-                    u[i][j] = (sx / rho[i][j]) + (dpdx * static_cast<T>(0.50) / rho[i][j]);
+                    u[i][j] = (sx / rho[i][j]) + (g * static_cast<T>(0.50) / rho[i][j]);
                     v[i][j] = sy / rho[i][j];
                 }
             }
@@ -220,7 +220,7 @@ public:
 
     void compute_exact() {
         for (int j = 0; j <= m; j++) {
-            uexact[j] = static_cast<T>(-0.50) * dpdx * (static_cast<T>(j * j) - (static_cast<T>(m * j))) / nu;
+            uexact[j] = static_cast<T>(-0.50) * g * (static_cast<T>(j * j) - (static_cast<T>(m * j))) / nu;
         }
     }
 
@@ -252,14 +252,12 @@ public:
     void computeShearStress() {
         for (int j = 1; j < m; j++) {
             for (int i = 1; i < n; i++) {
-                // Calculate the velocity gradients
+                
                 T dudx = static_cast<T>((u[i + 1][j] - u[i - 1][j]) / (2.0 * dx));
-                // T dvdy = static_cast<T>((v[i][j + 1] - v[i][j - 1]) / (2.0 * dy));
 
-                // Compute the shear stress component σxy
 
                 shearStress[i][j] = nu * (dudx);
-                cout << i << " "<< j << " " << shearStress[i][j] << endl;
+                
             }
         }
     }
@@ -267,7 +265,7 @@ public:
     ofstream file("sheardata.txt");
     
 
-    // Write the shear stress data to the file
+    
     for (int j = 0; j <= m; j++) {
         for (int i = 0; i <= n; i++) {
             file << i << " " << j << " " << shearStress[i][j] << endl;
@@ -282,15 +280,15 @@ public:
 int main() {
     int nx = 100;
     int ny = 30;
-    LatticeBoltzmann<float> lbm(nx, ny);
-    int time = 20000;
+    LatticeBoltzmann<long long> lbm(nx, ny);
+    int time = 10000;
 
     lbm.initializeF();
     lbm.collision(time);
     lbm.compute_exact();
     lbm.generate_data();
 
-    lbm.initializeShearStress(); // Initialize the shear stress array
+    lbm.initializeShearStress(); 
     lbm.computeShearStress();
     lbm.saveShearStressData();
 
