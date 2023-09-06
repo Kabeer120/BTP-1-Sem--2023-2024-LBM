@@ -220,8 +220,16 @@ public:
 
     void compute_exact() {
         for (int j = 0; j <= m; j++) {
-            uexact[j] = static_cast<T>(-0.50) * g * (static_cast<T>(j * j) - (static_cast<T>(m * j))) / nu;
+        
+            T y = static_cast<T>(j) / static_cast<T>(m) * m;
+            
+            
+            uexact[j] = (-g / (2 * nu)) * (m * m - y * y);
         }
+
+        // for (int j = 0; j <= m; j++) {
+        //     uexact[j] = static_cast<T>(-0.50) * dpdx * (static_cast<T>(j * j) - (static_cast<T>(m * j))) / nu;
+        // }
     }
 
     void generate_data() {
