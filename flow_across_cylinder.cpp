@@ -15,7 +15,6 @@ private:
     T** u;
     T** v;
     T** rho;
-    T*** source;
     T* w;
     T* ex;
     T* ey;
@@ -36,10 +35,14 @@ private:
     T sy;
     T* uexact;
     T** shearStress;
+    T mach;
+    T sound;
+    T re;
+    T uxn;
 
 public:
     LatticeBoltzmann(int nx, int ny)
-        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), rho0(1.0), tau(0.80), g(9.8) {
+        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), uxn= mach*sound, nu=ux*ny/re ,rho0(1.0), tau=ny*ny/nu, g(9.8) {
 
         f = new T**[9];
         feq = new T**[9];
