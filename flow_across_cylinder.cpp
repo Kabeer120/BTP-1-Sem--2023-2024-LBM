@@ -35,14 +35,14 @@ private:
     T sy;
     T* uexact;
     T** shearStress;
-    T mach;
-    T sound;
+    T mach=;
+    T sound=;
     T re;
     T uxn;
 
 public:
     LatticeBoltzmann(int nx, int ny)
-        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), uxn= mach*sound, nu=ux*ny/re ,rho0(1.0), tau=ny*ny/nu, g(9.8) {
+        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), uxn( mach*sound), nu(ux*ny/re) ,rho0(1.0), tau(ny*ny/nu), g(9.8) {
 
         f = new T**[9];
         feq = new T**[9];
@@ -133,6 +133,19 @@ public:
     void collision(int steps) {
         for (int t = 1; t <= steps; t++) {
             // Collision
+            for (int i=0; i < m;i++){
+                for(int k =0 ; k <=8;k++{
+
+                    f[0][i][k] = 
+                  T t2 = u[i][j] * ex[k] + v[i][j] * ey[k];
+                  T t3 = static_cast<T>(3.0) * (ex[k] - u[i][j]);
+                 T t4 = static_cast<T>(9.0) * ((ex[k] * u[i][j]) + (ey[k] * v[i][j])) * ex[k];
+                  source[k][i][j] = (static_cast<T>(1.0) - static_cast<T>(0.50) / tau) * w[k] * g * (t3 + t4);
+                feq[k][i][j] = rho[i][j] * w[k] * (static_cast<T>(1.0) + (static_cast<T>(3.0) * t2) + (static_cast<T>(4.50) * t2 * t2) - (static_cast<T>(1.50) * t1));
+                f[k][i][j] = (omega * feq[k][i][j]) + ((static_cast<T>(1.0) - omega) * f[k][i][j]) + source[k][i][j];
+                }
+            }
+            
             for (int j = 0; j <= m; j++) {
                 for (int i = 0; i <= n; i++) {
                     T t1 = u[i][j] * u[i][j] + v[i][j] * v[i][j];
