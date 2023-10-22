@@ -42,7 +42,7 @@ private:
 
 public:
     LatticeBoltzmann(int nx, int ny)
-        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), uxn( mach*sound), nu(ux*ny/re) ,rho0(1.0), tau(ny*ny/nu), g(9.8) {
+        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), uxn( mach*sound), nu(ux*ny/re) ,rho0(1.0), tau(ny*ny/nu), g() {
 
         f = new T**[9];
         feq = new T**[9];
@@ -135,19 +135,16 @@ public:
             // Collision
             for (int i=0; i < m;i++){
                 for(int k =0 ; k <=8;k++{
-
-                    f[0][i][k] = 
-                  T t2 = u[i][j] * ex[k] + v[i][j] * ey[k];
-                  T t3 = static_cast<T>(3.0) * (ex[k] - u[i][j]);
-                 T t4 = static_cast<T>(9.0) * ((ex[k] * u[i][j]) + (ey[k] * v[i][j])) * ex[k];
-                  source[k][i][j] = (static_cast<T>(1.0) - static_cast<T>(0.50) / tau) * w[k] * g * (t3 + t4);
-                feq[k][i][j] = rho[i][j] * w[k] * (static_cast<T>(1.0) + (static_cast<T>(3.0) * t2) + (static_cast<T>(4.50) * t2 * t2) - (static_cast<T>(1.50) * t1));
-                f[k][i][j] = (omega * feq[k][i][j]) + ((static_cast<T>(1.0) - omega) * f[k][i][j]) + source[k][i][j];
+                    feq[k][i][0]=
+                   
                 }
             }
+           for(int j=0;j<n;j++){
+               for (int k=0;k<=8;k++){
+                    
             
-            for (int j = 0; j <= m; j++) {
-                for (int i = 0; i <= n; i++) {
+            for (int j = 1; j <= m; j++) {
+                for (int i = 1; i <= n; i++) {
                     T t1 = u[i][j] * u[i][j] + v[i][j] * v[i][j];
                     for (int k = 0; k <= 8; k++) {
                         T t2 = u[i][j] * ex[k] + v[i][j] * ey[k];
@@ -155,7 +152,7 @@ public:
                         T t4 = static_cast<T>(9.0) * ((ex[k] * u[i][j]) + (ey[k] * v[i][j])) * ex[k];
                         source[k][i][j] = (static_cast<T>(1.0) - static_cast<T>(0.50) / tau) * w[k] * g * (t3 + t4);
                         feq[k][i][j] = rho[i][j] * w[k] * (static_cast<T>(1.0) + (static_cast<T>(3.0) * t2) + (static_cast<T>(4.50) * t2 * t2) - (static_cast<T>(1.50) * t1));
-                        f[k][i][j] = (omega * feq[k][i][j]) + ((static_cast<T>(1.0) - omega) * f[k][i][j]) + source[k][i][j];
+                        f[k][i][j] = (omega * feq[k][i][j]) + ((static_cast<T>(1.0) - omega) * f[k][i][j]) ;
                     }
                 }
             }
@@ -179,17 +176,17 @@ public:
                     f[6][i][j] = f[6][i + 1][j - 1];
                 }
             }
-            for (int j = 0; j < m; j++) {
+           
                 for (int i = 0; i <= n; i++) {
-                    f[4][i][j] = f[4][i][j + 1];
+                    f[4][1][j] = f[4][0][j];
                 }
                 for (int i = 0; i < n; i++) {
-                    f[7][i][j] = f[7][i + 1][j + 1];
+                    f[7][1][j] = f[7][0][j];
                 }
-                for (int i = n; i >= 1; i--) {
-                    f[8][i][j] = f[8][i - 1][j + 1];
+                for (int j= n; j >= 1; j--) {
+                    f[8][1][j] = f[6][0][j];
                 }
-            }
+            
             // Boundary Conditions
             // North and South boundary - wall
             for (int i = 0; i <= n; i++) {
