@@ -1,223 +1,304 @@
 #include <iostream>
 #include <cmath>
-#include<fstream>
+#include <fstream>
+#include <vector>
 #include<bits/stdc++.h>
-#include <cstdlib>
-#include <ctime>
 using namespace std;
 
+template <typename T>
+class LatticeBoltzmann {
+private:
+    int n;
+    int m;
+    T*** f;
+    T*** feq;
+    T** u;
+    T** v;
+    T** rho;
+    T*** source;
+    T* w;
+    T* ex;
+    T* ey;
+    T nu;
+    T omega;
+    T dx;
+    T dy;
+    T dt;
+    T rho0;
+    T tau;
+    T g;
+    T t1;
+    T t2;
+    T t3;
+    T t4;
+    T s;
+    T sx;
+    T sy;
+    T* uexact;
+    T** shearStress;
 
-int main() {
-    int Nx = 30;                 // resolution x-dir
-    int Ny = 30;                 // resolution y-dir
-    int rho0 = 100;               // average density
-    double tau = 0.6;  
-    double PI = 3.14;
-               // collision timescale
-    int Nt = 100;                // number of timesteps
-    bool plotRealTime = true; 
-    double inv_tau = -1.0 / tau;    // switch on for plotting as the simulation goes along
-    
-    // Lattice speeds / weights
-    int NL = 9;
-    int idxs[] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
-    int cxs[] = {0, 0, 1, 1, 1, 0, -1, -1, -1};
-    int cys[] = {0, 1, 1, 0, -1, -1, -1, 0, 1};
-    double weights[] = {4.0/9, 1.0/9, 1.0/36, 1.0/9, 1.0/36, 1.0/9, 1.0/36, 1.0/9, 1.0/36};
-    double F[Ny][Nx][NL];
-    std::srand(std::time(nullptr)); // Seed the random number generator
-    for (int y = 0; y < Ny; ++y) {
-        for (int x = 0; x < Nx; ++x) {
-            for (int l = 0; l < NL; ++l) {
-                F[y][x][l] = 1.0;  // Initialize with ones
-                F[y][x][l] += 0.01 * (static_cast<double>(std::rand()) / RAND_MAX - 0.5); // Add random noise
+public:
+    LatticeBoltzmann(int nx, int ny)
+        : n(nx), m(ny), dx(1.0), dy(1.0), dt(1.0), rho0(1.0), tau(0.80), g(9.8) {
+
+        f = new T**[9];
+        feq = new T**[9];
+        source = new T**[9];
+        for (int k = 0; k < 9; k++) {
+            f[k] = new T*[n + 1];
+            feq[k] = new T*[n + 1];
+            source[k] = new T*[n + 1];
+            for (int i = 0; i <= n; i++) {
+                f[k][i] = new T[m + 1];
+                feq[k][i] = new T[m + 1];
+                source[k][i] = new T[m + 1];
             }
         }
-    }
-    for (int y = 0; y < Ny; ++y) {
-        for (int x = 0; x < Nx; ++x) {
-            F[y][x][3] += 2.0 * (1.0 + 0.2 * std::cos(2.0 * PI * static_cast<double>(x) / Nx * 4.0));
+
+        u = new T*[n + 1];
+        v = new T*[n + 1];
+        rho = new T*[n + 1];
+        for (int i = 0; i <= n; i++) {
+            u[i] = new T[m + 1];
+            v[i] = new T[m + 1];
+            rho[i] = new T[m + 1];
         }
-    }
-    int X[Ny][Nx], Y[Ny][Nx];
-    for (int y = 0; y < Ny; ++y) {
-        for (int x = 0; x < Nx; ++x) {
-            X[y][x] = x;
-            Y[y][x] = y;
-        }
-    }
 
-    // Calculate rho for each grid point
-    double rho[Ny][Nx];
-    for (int y = 0; y < Ny; ++y) {
-        for (int x = 0; x < Nx; ++x) {
-            double sum = 0.0;
-            for (int i = 0; i < NL; ++i) {
-                sum += F[y][x][i];
-            }
-            rho[y][x] = sum;
-        }
-    }
+        w = new T[9];
+        ex = new T[9];
+        ey = new T[9];
+        uexact = new T[m + 1];
 
-    // Normalize F based on rho
-    for (int y = 0; y < Ny; ++y) {
-        for (int x = 0; x < Nx; ++x) {
-            for (int i = 0; i < NL; ++i) {
-                F[y][x][i] *= rho0 / rho[y][x];
-            }
-        }
-    }
-    
+        w[0] = static_cast<T>(4.0 / 9.0);
+        w[1] = static_cast<T>(1.0 / 9.0);
+        w[2] = static_cast<T>(1.0 / 9.0);
+        w[3] = static_cast<T>(1.0 / 9.0);
+        w[4] = static_cast<T>(1.0 / 9.0);
+        w[5] = static_cast<T>(1.0 / 36.0);
+        w[6] = static_cast<T>(1.0 / 36.0);
+        w[7] = static_cast<T>(1.0 / 36.0);
+        w[8] = static_cast<T>(1.0 / 36.0);
 
-    bool cylinder[Ny][Nx];
-    int centerX = Nx / 4;
-    int centerY = Ny / 2;
-    int radius = Ny / 4;
-    for (int y = 0; y < Ny; ++y) {
-        for (int x = 0; x < Nx; ++x) {
-            int dx = x - centerX;
-            int dy = y - centerY;
-            cylinder[y][x] = dx * dx + dy * dy < radius * radius;
-        }
-    }
+        ex[0] = static_cast<T>(0.0);
+        ex[1] = static_cast<T>(1.0);
+        ex[2] = static_cast<T>(0.0);
+        ex[3] = static_cast<T>(-1.0);
+        ex[4] = static_cast<T>(0.0);
+        ex[5] = static_cast<T>(1.0);
+        ex[6] = static_cast<T>(-1.0);
+        ex[7] = static_cast<T>(-1.0);
+        ex[8] = static_cast<T>(1.0);
 
-    // fig = plt.figure(figsize=(4,2), dpi=80)
+        ey[0] = static_cast<T>(0.0);
+        ey[1] = static_cast<T>(0.0);
+        ey[2] = static_cast<T>(1.0);
+        ey[3] = static_cast<T>(0.0);
+        ey[4] = static_cast<T>(-1.0);
+        ey[5] = static_cast<T>(1.0);
+        ey[6] = static_cast<T>(1.0);
+        ey[7] = static_cast<T>(-1.0);
+        ey[8] = static_cast<T>(-1.0);
 
-    for(int it  =0 ; it < Nt;it++){
-
-        cout << it << endl;
-
-        // # Drift
-        // for i, cx, cy in zip(idxs, cxs, cys):
-        //     F[:,:,i] = np.roll(F[:,:,i], cx, axis=1)
-        //     F[:,:,i] = np.roll(F[:,:,i], cy, axis=0)
-        
-        std::vector<std::vector<double>> bndryF;
-        for (int i = 0; i < Ny; i++) {
-            for (int j = 0; j < Nx; j++) {
-                if (cylinder[i][j]) {
-                    std::vector<double> temp;
-                    for (int k = 0; k < NL; k++) {
-                        temp.push_back(F[i][j][k]);
-                    }
-                    bndryF.push_back(temp);
+        for (int i = 0; i <= n; i++) {
+            for (int j = 0; j <= m; j++) {
+                u[i][j] = static_cast<T>(0.0);
+                v[i][j] = static_cast<T>(0.0);
+                rho[i][j] = static_cast<T>(rho0);
+                for (int k = 0; k < 9; k++) {
+                    source[k][i][j] = static_cast<T>(0.0);
                 }
             }
         }
 
-        for (int i = 0; i < bndryF.size(); i++) {
-            std::vector<double> reordered = {
-                bndryF[i][0], bndryF[i][5], bndryF[i][6], bndryF[i][7],
-                bndryF[i][8], bndryF[i][1], bndryF[i][2], bndryF[i][3], bndryF[i][4]
-            };
-            bndryF[i] = reordered;
-        }
+        nu = (tau - static_cast<T>(0.50)) / static_cast<T>(3.0);
+        omega = static_cast<T>(1.0) / ((static_cast<T>(3.0) * nu) + static_cast<T>(0.50));
+    }
 
-        
-
-        std::vector<std::vector<double>> rho(Ny, std::vector<double>(Nx, 0.0));
-        for (int i = 0; i < Ny; i++) {
-            for (int j = 0; j < Nx; j++) {
-                double sum = 0.0;
-                for (int k = 0; k < NL; k++) {
-                    sum += F[k][i][j];
-                }
-                rho[i][j] = sum;
-            }
-        }
-
-        // Calculate ux
-        std::vector<std::vector<double>> ux(Ny, std::vector<double>(Nx, 0.0));
-        for (int i = 0; i < Ny; i++) {
-            for (int j = 0; j < Nx; j++) {
-                double sum = 0.0;
-                for (int k = 0; k < NL; k++) {
-                    sum += F[k][i][j] * cxs[k];
-                }
-                ux[i][j] = sum / rho[i][j];
-            }
-        }
-
-        // Calculate uy
-        std::vector<std::vector<double>> uy(Ny, std::vector<double>(Nx, 0.0));
-        for (int i = 0; i < Ny; i++) {
-            for (int j = 0; j < Nx; j++) {
-                double sum = 0.0;
-                for (int k = 0; k < NL; k++) {
-                    sum += F[k][i][j] * cys[k];
-                }
-                uy[i][j] = sum / rho[i][j];
-            }
-        }
-
-        std::vector<std::vector<std::vector<double>>> Feq(Ny, std::vector<std::vector<double>>(Nx, std::vector<double>(NL, 0.0)));
-
-        for (int i = 0; i < NL; i++) {
-            int cx = cxs[i];
-            int cy = cys[i];
-            double w = weights[i];
-
-            for (int j = 0; j < Ny; j++) {
-                for (int k = 0; k < Nx; k++) {
-                    Feq[j][k][i] = rho[j][k] * w * (1 + 3 * (cx * ux[j][k] + cy * uy[j][k]) +
-                                                     9 * std::pow(cx * ux[j][k] + cy * uy[j][k], 2) / 2 -
-                                                     3 * (ux[j][k] * ux[j][k] + uy[j][k] * uy[j][k]) / 2);
+    void initializeF() {
+        for (int j = 0; j <= m; j++) {
+            for (int i = 0; i <= n; i++) {
+                T t1 = u[i][j] * u[i][j] + v[i][j] * v[i][j];
+                for (int k = 0; k <= 8; k++) {
+                    T t2 = u[i][j] * ex[k] + v[i][j] * ey[k];
+                    feq[k][i][j] = rho[i][j] * w[k] * (static_cast<T>(1.0) + (static_cast<T>(3.0) * t2) + (static_cast<T>(4.50) * t2 * t2) - (static_cast<T>(1.50) * t1));
+                    f[k][i][j] = feq[k][i][j];
                 }
             }
         }
+    }
 
-
-
-        for (int i = 0; i < NL; i++) {
-            for (int j = 0; j < Ny; j++) {
-                for (int k = 0; k < Nx; k++) {
-                    F[i][j][k] += inv_tau * (Feq[j][k][i] - F[i][j][k]);
-                }
-            }
-        }
-
-        for (int i = 0; i < Ny; i++) {
-            for (int j = 0; j < Nx; j++) {
-                if (cylinder[i][j]) {
-                    for (int k = 0; k < NL; k++) {
-                        F[k][i][j] = bndryF[i][k];
+    void collision(int steps) {
+        for (int t = 1; t <= steps; t++) {
+            // Collision
+            for (int j = 0; j <= m; j++) {
+                for (int i = 0; i <= n; i++) {
+                    T t1 = u[i][j] * u[i][j] + v[i][j] * v[i][j];
+                    for (int k = 0; k <= 8; k++) {
+                        T t2 = u[i][j] * ex[k] + v[i][j] * ey[k];
+                        T t3 = static_cast<T>(3.0) * (ex[k] - u[i][j]);
+                        T t4 = static_cast<T>(9.0) * ((ex[k] * u[i][j]) + (ey[k] * v[i][j])) * ex[k];
+                        source[k][i][j] = (static_cast<T>(1.0) - static_cast<T>(0.50) / tau) * w[k] * g * (t3 + t4);
+                        feq[k][i][j] = rho[i][j] * w[k] * (static_cast<T>(1.0) + (static_cast<T>(3.0) * t2) + (static_cast<T>(4.50) * t2 * t2) - (static_cast<T>(1.50) * t1));
+                        f[k][i][j] = (omega * feq[k][i][j]) + ((static_cast<T>(1.0) - omega) * f[k][i][j]) + source[k][i][j];
                     }
                 }
             }
+            for (int j = 0; j <= m; j++) {
+                for (int i = n; i >= 1; i--) {
+                    f[1][i][j] = f[1][i - 1][j];
+                }
+                for (int i = 0; i <= n - 1; i++) {
+                    f[3][i][j] = f[3][i + 1][j];
+                }
+            }
+            // Streaming.
+            for (int j = m; j >= 1; j--) {
+                for (int i = 0; i <= n; i++) {
+                    f[2][i][j] = f[2][i][j - 1];
+                }
+                for (int i = n; i >= 1; i--) {
+                    f[5][i][j] = f[5][i - 1][j - 1];
+                }
+                for (int i = 0; i <= n - 1; i++) {
+                    f[6][i][j] = f[6][i + 1][j - 1];
+                }
+            }
+            for (int j = 0; j < m; j++) {
+                for (int i = 0; i <= n; i++) {
+                    f[4][i][j] = f[4][i][j + 1];
+                }
+                for (int i = 0; i < n; i++) {
+                    f[7][i][j] = f[7][i + 1][j + 1];
+                }
+                for (int i = n; i >= 1; i--) {
+                    f[8][i][j] = f[8][i - 1][j + 1];
+                }
+            }
+            // Boundary Conditions
+            // North and South boundary - wall
+            for (int i = 0; i <= n; i++) {
+                f[2][i][0] = f[4][i][0];
+                f[5][i][0] = f[7][i][0];
+                f[6][i][0] = f[8][i][0];
+                f[4][i][m] = f[2][i][m];
+                f[7][i][m] = f[5][i][m];
+                f[8][i][m] = f[6][i][m];
+            }
+            for (int j = 0; j <= m; j++) {
+                // West boundary - periodicity
+                f[1][0][j] = f[1][n][j];
+                f[5][0][j] = f[5][n][j];
+                f[8][0][j] = f[8][n][j];
+                // East boundary - periodicity
+                f[3][n][j] = f[3][0][j];
+                f[6][n][j] = f[6][0][j];
+                f[7][n][j] = f[7][0][j];
+            }
+            for (int j = 0; j <= m; j++) {
+                for (int i = 0; i <= n; i++) {
+                    T s = static_cast<T>(0.0);
+                    for (int k = 0; k <= 8; k++) {
+                        s += f[k][i][j];
+                    }
+                    rho[i][j] = s;
+                }
+            }
+            for (int j = 0; j <= m; j++) {
+                for (int i = 0; i <= n; i++) {
+                    T sx = static_cast<T>(0.0);
+                    T sy = static_cast<T>(0.0);
+                    for (int k = 0; k <= 8; k++) {
+                        sx += f[k][i][j] * ex[k];
+                        sy += f[k][i][j] * ey[k];
+                    }
+                    u[i][j] = (sx / rho[i][j]) + (g * static_cast<T>(0.50) / rho[i][j]);
+                    v[i][j] = sy / rho[i][j];
+                }
+            }
         }
-
-
-        // if (plotRealTime and (it % 10) == 0) or (it == Nt-1):
-        //     plt.cla()
-        //     ux[cylinder] = 0
-        //     uy[cylinder] = 0
-        //     vorticity = (np.roll(ux, -1, axis=0) - np.roll(ux, 1, axis=0)) - (np.roll(uy, -1, axis=1) - np.roll(uy, 1, axis=1))
-        //     vorticity[cylinder] = np.nan
-        //     vorticity = np.ma.array(vorticity, mask=cylinder)
-        //     plt.imshow(vorticity, cmap='bwr')
-        //     plt.imshow(~cylinder, cmap='gray', alpha=0.3)
-        //     plt.clim(-.1, .1)
-        //     ax = plt.gca()
-        //     ax.invert_yaxis()
-        //     ax.get_xaxis().set_visible(False)
-        //     ax.get_yaxis().set_visible(False)   
-        //     ax.set_aspect('equal')  
-        //     plt.pause(0.001)
-
-
     }
 
+    void compute_exact() {
+        for (int j = 0; j <= m; j++) {
+        
+            T y = static_cast<T>(j) / static_cast<T>(m) * m;
+            
+            
+            uexact[j] = (-g / (2 * nu)) * (m * m - y * y);
+        }
+
+        // for (int j = 0; j <= m; j++) {
+        //     uexact[j] = static_cast<T>(-0.50) * dpdx * (static_cast<T>(j * j) - (static_cast<T>(m * j))) / nu;
+        // }
+    }
+
+    void generate_data() {
+        std::ofstream file1("field.txt");
+        std::ofstream file2("comparison.txt");
+
+        for (int j = 0; j <= m; j++) {
+            for (int i = 0; i <= n; i++) {
+                file1 << i << " " << j << " " << u[i][j] << " " << v[i][j] << " " << rho[i][j] << std::endl;
+            }
+            file1 << std::endl;
+        }
+
+        for (int j = 0; j <= m; j++) {
+            file2 << static_cast<double>(j) / m << " " << u[60][j] << " " << v[60][j] << " " << uexact[j] << std::endl;
+        }
+
+        file1.close();
+        file2.close();
+    }
+    void initializeShearStress() {
+        shearStress = new T*[n + 1];
+        for (int i = 0; i <= n; i++) {
+            shearStress[i] = new T[m + 1];
+            memset(shearStress[i], 0, sizeof(T) * (m + 1));
+        }
+    }
+    void computeShearStress() {
+        for (int j = 1; j < m; j++) {
+            for (int i = 1; i < n; i++) {
+                
+                T dudx = static_cast<T>((u[i + 1][j] - u[i - 1][j]) / (2.0 * dx));
 
 
+                shearStress[i][j] = nu * (dudx);
+                
+            }
+        }
+    }
+    void saveShearStressData() {
+    ofstream file("sheardata.txt");
+    
 
     
-    
-    
-    return 0;
+    for (int j = 0; j <= m; j++) {
+        for (int i = 0; i <= n; i++) {
+            file << i << " " << j << " " << shearStress[i][j] << endl;
+        }
+    }
+
+    file.close();
 }
 
+};
 
+int main() {
+    int nx = 100;
+    int ny = 30;
+    LatticeBoltzmann<long long> lbm(nx, ny);
+    int time = 10000;
 
+    lbm.initializeF();
+    lbm.collision(time);
+    lbm.compute_exact();
+    lbm.generate_data();
 
+    lbm.initializeShearStress(); 
+    lbm.computeShearStress();
+    lbm.saveShearStressData();
 
-
+    return 0;
+}
