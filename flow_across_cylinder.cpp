@@ -315,3 +315,83 @@ int main() {
 
     return 0;
 }
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+// Define the lattice size
+const int nx = 100;
+const int ny = 100;
+
+// Define the fluid properties
+const double rho = 1.0;
+const double nu = 0.01;
+
+// Define the pressure gradient
+const double dp = 1.0;
+
+// Define the boundary conditions
+const bool periodicX = true;
+const bool periodicY = true;
+
+// Declare the lattice
+vector<double> f[nx][ny][9];
+
+// Initialize the lattice
+for (int i = 0; i < nx; i++) {
+  for (int j = 0; j < ny; j++) {
+    for (int k = 0; k < 9; k++) {
+      f[i][j][k] = 1.0 / 9.0;
+    }
+  }
+}
+
+// Calculate the collision step
+for (int i = 0; i < nx; i++) {
+  for (int j = 0; j < ny; j++) {
+    for (int k = 0; k < 9; k++) {
+      f[i][j][k] = f[i][j][k] - (3.0 * dp * dt) / (2.0 * nu) * (f[i][j][k] - f_eq[i][j][k]);
+    }
+  }
+}
+
+// Calculate the streaming step
+for (int i = 0; i < nx; i++) {
+  for (int j = 0; j < ny; j++) {
+    for (int k = 0; k < 9; k++) {
+      f[(i + dx[k]) % nx][(j + dy[k]) % ny][k] = f[i][j][k];
+    }
+  }
+}
+
+// Print the results
+for (int i = 0; i < nx; i++) {
+  for (int j = 0; j < ny; j++) {
+    cout << f[i][j][0] << " ";
+  }
+  cout << endl;
+}
+
+int main() {
+  // Initialize the simulation
+  double dt = 0.1;
+  int t = 0;
+
+  // Run the simulation for 100 time steps
+  while (t < 100) {
+    // Calculate the collision step
+    calculateCollisionStep(f, dt);
+
+    // Calculate the streaming step
+    calculateStreamingStep(f, dx, dy);
+
+    // Increment the time step
+    t++;
+  }
+
+  // Print the results
+  printResults(f);
+
+  return 0;
+}
