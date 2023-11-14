@@ -52,7 +52,7 @@ private:
 
 public:
     LatticeBoltzmann(int nx, int ny)
-        : N(nx), M(ny), dx(1.0), dy(1.0), dt(1.0), uxn( mach*sound), nu(ux*ny/re) ,rho0(1.0), tau(ny*ny/nu), g() {
+        : N(nx), M(ny), dx(1.0), dy(1.0), dt(1.0) {
         int n = N+2;
         int m = M + 2;
 
