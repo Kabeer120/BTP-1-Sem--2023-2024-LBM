@@ -30,6 +30,12 @@ Ensure you have a C++ compiler installed and compile the simulation code:
 ```bash
 g++ -o flowPastCylinder flowPastCylinder.cpp -std=c++11
 ```
+```bash
+./flowPastCylinder
+```
+
+
+
 
 ## Visualizing
 ```bash
