@@ -5,7 +5,6 @@
 #include<bits/stdc++.h>
 using namespace std;
 
-// 3-D TO 1-D array
 
 
 // mark points within or boundary of cylinder.
@@ -75,8 +74,8 @@ private:
 
 public:
     LatticeBoltzmann(int nx, int ny)
-        : N(nx), M(ny), dx(1.0), dy(1.0), dt(1.0), rho0(1.0), tau(0.80), g(0.00001) {
-        cout << simulationTime;
+        : N(nx), M(ny), dx(1.0), dy(1.0), dt(1.0), rho0(1.0), tau(0.80), g(9.8) {
+        
 
 
         // 0 and n+1th column are ghost nodes.
@@ -173,8 +172,6 @@ public:
         omega = static_cast<T>(1.0) / ((static_cast<T>(3.0) * nu) + static_cast<T>(0.50));
     }
 
-
-
     void initializeF() {
         for (int j = 0; j < m; j++) {
             for (int i = 0; i < n; i++) {
@@ -219,7 +216,7 @@ public:
               for (int j = 1; j < m-1; ++j) {
                 int position = pow(i-circleX, 2) + pow(j-circleY, 2);
                 if (position <= circleR2) {
-                    //Bounce back only going into cylinder. ( Make other function)
+                    //Bounce back only going into cylinder. 
                     // Correct the DIrecitons.
                     //( 1- EAST, 2- NORTH, 3- WEST, 4- SOUTH,5 - NE, 6-NW,7- SW,8- SE )
                     
@@ -294,8 +291,6 @@ public:
 
             }
 
-
-
             for (int j = 1; j < m-1; j++) {
                 for (int i = n-1; i >= 1; i--) {
                     f[1][i][j] = f[1][i - 1][j];
@@ -369,26 +364,11 @@ public:
                 }
             }
         }
-    }
-
-    void compute_exact() {
-        for (int j = 1; j < m-1; j++) {
-        
-            T y = static_cast<T>(j) / static_cast<T>(m) * m;
-            
-            
-            uexact[j] = (-g / (2 * nu)) * (m * m - y * y);
-        }
-
-        // for (int j = 0; j <= m; j++) {
-        //     uexact[j] = static_cast<T>(-0.50) * dpdx * (static_cast<T>(j * j) - (static_cast<T>(m * j))) / nu;
-        // }
-    }
+    };
 
     void generate_data() {
-        std::ofstream file1("field.txt");
-        std::ofstream file2("comparison.txt");
-
+        std::ofstream file1("field.vtk");
+     
         for (int j = 1; j < m-1; j++) {
             for (int i = 1; i < n-1; i++) {
                 int position = std::pow(i-circleX, 2)+std::pow(j-circleY, 2);
@@ -401,52 +381,13 @@ public:
             file1 << std::endl;
         }
 
-        for (int j = 0; j < m-1; j++) {
-            file2 << static_cast<double>(j) / m << " " << u[60][j] << " " << v[60][j] << " " << uexact[j] << std::endl;
-        }
-
         file1.close();
-        file2.close();
-    }
-    void initializeShearStress() {
-        shearStress = new T*[n ];
-        for (int i = 0; i < n-1; i++) {
-            shearStress[i] = new T[m ];
-            memset(shearStress[i], 0, sizeof(T) * (m));
-        }
-    }
-    void computeShearStress() {
-        for (int j = 1; j < m-1; j++) {
-            for (int i = 1; i < n-1; i++) {
-                
-                T dudx = static_cast<T>((u[i + 1][j] - u[i - 1][j]) / (2.0 * dx));
-
-
-                shearStress[i][j] = nu * (dudx);
-                
-            }
-        }
-    }
-    void saveShearStressData() {
-    ofstream file("sheardata.txt");
-    
-
-    
-    for (int j = 1; j < m-1; j++) {
-        for (int i = 1; i < n-1; i++) {
-
-            file << i << " " << j << " " << shearStress[i][j] << endl;
-        }
-    }
-
-    file.close();
-}
-
-};
+        
+    };
 
 int main() {
-    int nx = 100;
-    int ny = 30;
+    int nx = 400;
+    int ny = 100;
     LatticeBoltzmann<int> lbm(nx, ny);
     
 
