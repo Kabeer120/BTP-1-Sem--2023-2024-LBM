@@ -393,12 +393,10 @@ int main() {
 
     lbm.initializeF();
     lbm.collision();
-    lbm.compute_exact();
+   
     lbm.generate_data();
 
-    lbm.initializeShearStress(); 
-    lbm.computeShearStress();
-    lbm.saveShearStressData();
+    
 
 
     return 0;
